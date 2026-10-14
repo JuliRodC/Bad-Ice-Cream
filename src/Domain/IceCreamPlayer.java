@@ -5,6 +5,10 @@ import java.awt.Image;
 import java.awt.Point;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
 
 /**
  * Implementacion concreta del helado jugador con movimiento basado en cuadriculas.
@@ -117,7 +121,7 @@ public class IceCreamPlayer implements Player {
         this.performingWinAnimation = false;
         this.winFrame = 0;
         this.winCounter = 0;
-
+        loadAllSprites(spriteBasePath);
     }
 
     public void setCollisionDetector(CollisionDetector detector, GridSystem gridSystem) {
@@ -217,10 +221,57 @@ public class IceCreamPlayer implements Player {
     }
 
 
+    private void loadAllSprites(String base) {
+        sprites = new EnumMap<>(Player.Direction.class);
+        putIceSprites = new EnumMap<>(Player.Direction.class);
 
+        // Caminar (UP/DOWN/LEFT/RIGHT) e idle (primer frame de caminar)
+        Image[] up    = loadFrames(base + "/Walk/Up");
+        Image[] down  = loadFrames(base + "/Walk/Down");
+        Image[] left  = loadFrames(base + "/Walk/Left");
+        Image[] right = loadFrames(base + "/Walk/Right");
 
-    private Image createPlaceholderImage() {
-        return new ImageIcon().getImage();
+        sprites.put(Player.Direction.UP, up);
+        sprites.put(Player.Direction.DOWN, down);
+        sprites.put(Player.Direction.LEFT, left);
+        sprites.put(Player.Direction.RIGHT, right);
+        sprites.put(Player.Direction.IDLE_UP, firstFrame(up));
+        sprites.put(Player.Direction.IDLE_DOWN, firstFrame(down));
+        sprites.put(Player.Direction.IDLE_LEFT, firstFrame(left));
+        sprites.put(Player.Direction.IDLE_RIGHT, firstFrame(right));
+
+        // Poner hielo: Back = arriba, Front = abajo
+        putIceSprites.put(Player.Direction.UP, loadFrames(base + "/Put Ice/Back"));
+        putIceSprites.put(Player.Direction.DOWN, loadFrames(base + "/Put Ice/Front"));
+        putIceSprites.put(Player.Direction.LEFT, loadFrames(base + "/Put Ice/Left"));
+        putIceSprites.put(Player.Direction.RIGHT, loadFrames(base + "/Put Ice/Right"));
+
+        Image[] fallback = firstFrame(down);
+        breakIceSprites = nonEmptyOr(loadFrames(base + "/Broke Ice"), fallback);
+        deathSprites    = nonEmptyOr(loadFrames(base + "/Dead"), fallback);
+        winSprites      = nonEmptyOr(loadFrames(base + "/Win"), fallback);
+    }
+
+    /** Carga 1.png, 2.png, ... hasta que no exista el siguiente. */
+    private static Image[] loadFrames(String folder) {
+        List<Image> frames = new ArrayList<>();
+        for (int i = 1; ; i++) {
+            File f = new File(folder + "/" + i + ".png");
+            if (!f.exists()) break;
+            frames.add(new ImageIcon(f.getPath()).getImage());
+        }
+        if (frames.isEmpty()) {
+            System.out.println("Advertencia: sin sprites en " + folder);
+        }
+        return frames.toArray(new Image[0]);
+    }
+
+    private static Image[] firstFrame(Image[] arr) {
+        return arr.length > 0 ? new Image[]{arr[0]} : new Image[0];
+    }
+
+    private static Image[] nonEmptyOr(Image[] arr, Image[] fallback) {
+        return arr.length > 0 ? arr : fallback;
     }
 
     @Override
